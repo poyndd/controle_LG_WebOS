@@ -13,4 +13,7 @@
         <!-- MaterialComponents -->
         <item name="materialButtonStyle">@style/Widget.MaterialComponents.Button</item>
     </style>
+
+    <!-- Alias para satisfazer referências que pedem Theme.App -->
+    <style name="Theme.App" parent="Theme.LGRemote" />
 </resources>
