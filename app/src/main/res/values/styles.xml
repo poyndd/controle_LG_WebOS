@@ -1,9 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.App" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Theme.LGRemote" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <!-- Cores principais -->
         <item name="colorPrimary">@color/colorPrimary</item>
         <item name="colorPrimaryVariant">@color/colorPrimaryVariant</item>
         <item name="colorSecondary">@color/colorSecondary</item>
+
+        <!-- Aparência da janela -->
+        <item name="android:statusBarColor">@color/colorPrimaryVariant</item>
         <item name="android:windowBackground">@color/white</item>
+
+        <!-- MaterialComponents -->
+        <item name="materialButtonStyle">@style/Widget.MaterialComponents.Button</item>
     </style>
 </resources>
