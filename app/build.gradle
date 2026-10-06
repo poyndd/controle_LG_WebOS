@@ -1,7 +1,14 @@
 plugins {
     id 'com.android.application'
-    id 'org.jetbrains.kotlin.android' // remova se não usar Kotlin
+    id 'org.jetbrains.kotlin.android' version '1.8.22' // <-- adicione a versão aqui
 }
+
+android {
+    namespace "com.seudominio.seuapp"
+    compileSdk 33
+    ...
+}
+
 
 android {
     namespace "com.seu.dominio.seuapp"   // <--- substitua pelo seu namespace real
