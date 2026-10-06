@@ -1,3 +1,12 @@
+android {
+    namespace "com.seu.dominio.seuapp"   // <--- adicione esta linha
+    compileSdk 33
+    defaultConfig {
+        applicationId "com.seu.dominio.seuapp"
+        // ...
+    }
+    // ...
+}
 plugins {
     id 'com.android.application'
     id 'org.jetbrains.kotlin.android' version '1.9.0' apply false
