@@ -1,21 +1,14 @@
 plugins {
     id 'com.android.application'
-    id 'org.jetbrains.kotlin.android' version '1.8.22' // <-- adicione a versão aqui
+    id 'org.jetbrains.kotlin.android' version '1.8.22'
 }
 
 android {
-    namespace "com.seudominio.seuapp"
-    compileSdk 33
-    ...
-}
-
-
-android {
-    namespace "com.seu.dominio.seuapp"   // <--- substitua pelo seu namespace real
+    namespace "com.seudominio.seuapp"   // <-- substitua pelo seu namespace real
     compileSdk 33
 
     defaultConfig {
-        applicationId "com.seu.dominio.seuapp" // <--- mantenha consistente com namespace
+        applicationId "com.seudominio.seuapp" // <-- mantenha consistente
         minSdk 21
         targetSdk 33
         versionCode 1
@@ -31,6 +24,7 @@ android {
 }
 
 dependencies {
-    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.8.0" // ajuste conforme seu projeto
-    // adicione suas outras dependências aqui
+    implementation "org.jetbrains.kotlin:kotlin-stdlib:1.8.22"
+    // adicione aqui suas outras dependências, por exemplo:
+    // implementation 'androidx.core:core-ktx:1.9.0'
 }
