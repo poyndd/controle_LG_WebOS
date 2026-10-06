@@ -28,7 +28,8 @@ class LgRemoteClient {
                 .post(body)
                 .build()
             val resp = http.newCall(req).execute()
-            resp.use { it.isSuccessful }
+            val success = resp.use { r -> r.isSuccessful }
+            success
         } catch (e: Exception) {
             e.printStackTrace()
             false
