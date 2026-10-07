@@ -1,6 +1,8 @@
 package com.andre.lgremote
 
 import android.os.Bundle
+import android.view.MotionEvent
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
@@ -20,42 +22,143 @@ class MainActivity : AppCompatActivity() {
         client = LgRemoteClient()
 
         val ipField = findViewById<EditText>(R.id.ip_field)
+
         val btnPower = findViewById<Button>(R.id.btn_power)
+        val btnInput = findViewById<Button>(R.id.btn_input)
+
+        val btnHome = findViewById<Button>(R.id.btn_home)
+        val btnBack = findViewById<Button>(R.id.btn_back)
+
+        val btnMute = findViewById<Button>(R.id.btn_mute)
+
         val btnVolUp = findViewById<Button>(R.id.btn_vol_up)
         val btnVolDown = findViewById<Button>(R.id.btn_vol_down)
 
+        val btnChUp = findViewById<Button>(R.id.btn_ch_up)
+        val btnChDown = findViewById<Button>(R.id.btn_ch_down)
+
+        val btnYoutube = findViewById<Button>(R.id.btn_youtube)
+        val btnNetflix = findViewById<Button>(R.id.btn_netflix)
+
+        val touchpad = findViewById<View>(R.id.touchpad)
+
         btnPower.setOnClickListener {
-            val ip = ipField.text.toString().trim()
-            if (ip.isEmpty()) {
-                Toast.makeText(this, "Informe o IP da TV", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            CoroutineScope(Dispatchers.IO).launch {
-                val ok = client.sendKey(ip, "POWER")
-                runOnUiThread {
-                    Toast.makeText(this@MainActivity, if (ok) "Comando enviado" else "Falha", Toast.LENGTH_SHORT).show()
-                }
-            }
+            enviarComando(ipField.text.toString(), "POWER")
+        }
+
+        btnInput.setOnClickListener {
+            enviarComando(ipField.text.toString(), "INPUT")
+        }
+
+        btnHome.setOnClickListener {
+            enviarComando(ipField.text.toString(), "HOME")
+        }
+
+        btnBack.setOnClickListener {
+            enviarComando(ipField.text.toString(), "BACK")
+        }
+
+        btnMute.setOnClickListener {
+            enviarComando(ipField.text.toString(), "MUTE")
         }
 
         btnVolUp.setOnClickListener {
-            val ip = ipField.text.toString().trim()
-            CoroutineScope(Dispatchers.IO).launch {
-                val ok = client.sendKey(ip, "VOLUME_UP")
-                runOnUiThread {
-                    Toast.makeText(this@MainActivity, if (ok) "Volume + enviado" else "Falha", Toast.LENGTH_SHORT).show()
-                }
-            }
+            enviarComando(ipField.text.toString(), "VOLUME_UP")
         }
 
         btnVolDown.setOnClickListener {
-            val ip = ipField.text.toString().trim()
-            CoroutineScope(Dispatchers.IO).launch {
-                val ok = client.sendKey(ip, "VOLUME_DOWN")
-                runOnUiThread {
-                    Toast.makeText(this@MainActivity, if (ok) "Volume - enviado" else "Falha", Toast.LENGTH_SHORT).show()
+            enviarComando(ipField.text.toString(), "VOLUME_DOWN")
+        }
+
+        btnChUp.setOnClickListener {
+            enviarComando(ipField.text.toString(), "CHANNEL_UP")
+        }
+
+        btnChDown.setOnClickListener {
+            enviarComando(ipField.text.toString(), "CHANNEL_DOWN")
+        }
+
+        btnYoutube.setOnClickListener {
+            enviarComando(ipField.text.toString(), "YOUTUBE")
+        }
+
+        btnNetflix.setOnClickListener {
+            enviarComando(ipField.text.toString(), "NETFLIX")
+        }
+
+        var startX = 0f
+        var startY = 0f
+
+        touchpad.setOnTouchListener { _, event ->
+
+            when (event.action) {
+
+                MotionEvent.ACTION_DOWN -> {
+                    startX = event.x
+                    startY = event.y
                 }
+
+                MotionEvent.ACTION_MOVE -> {
+
+                    val dx = event.x - startX
+                    val dy = event.y - startY
+
+                    if (dx > 30) {
+                        enviarComando(ipField.text.toString(), "RIGHT")
+                        startX = event.x
+                    }
+
+                    if (dx < -30) {
+                        enviarComando(ipField.text.toString(), "LEFT")
+                        startX = event.x
+                    }
+
+                    if (dy > 30) {
+                        enviarComando(ipField.text.toString(), "DOWN")
+                        startY = event.y
+                    }
+
+                    if (dy < -30) {
+                        enviarComando(ipField.text.toString(), "UP")
+                        startY = event.y
+                    }
+                }
+
+                MotionEvent.ACTION_UP -> {
+                    enviarComando(ipField.text.toString(), "OK")
+                }
+            }
+
+            true
+        }
+    }
+
+    private fun enviarComando(ip: String, comando: String) {
+
+        val endereco = ip.trim()
+
+        if (endereco.isEmpty()) {
+            Toast.makeText(
+                this,
+                "Informe o IP da TV",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+
+            val ok = client.sendKey(endereco, comando)
+
+            runOnUiThread {
+
+                Toast.makeText(
+                    this@MainActivity,
+                    if (ok) "$comando enviado" else "Falha ao enviar $comando",
+                    Toast.LENGTH_SHORT
+                ).show()
             }
         }
     }
 }
+
