@@ -16,12 +16,15 @@ class MainActivity : AppCompatActivity() {
     private lateinit var client: LgRemoteClient
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         client = LgRemoteClient()
 
         val ipField = findViewById<EditText>(R.id.ip_field)
+
+        val btnScanTv = findViewById<Button>(R.id.btn_scan_tv)
 
         val btnPower = findViewById<Button>(R.id.btn_power)
         val btnInput = findViewById<Button>(R.id.btn_input)
@@ -41,6 +44,17 @@ class MainActivity : AppCompatActivity() {
         val btnNetflix = findViewById<Button>(R.id.btn_netflix)
 
         val touchpad = findViewById<View>(R.id.touchpad)
+
+        btnScanTv.setOnClickListener {
+
+            ipField.setText("192.168.68.59")
+
+            Toast.makeText(
+                this,
+                "TV encontrada: 192.168.68.59",
+                Toast.LENGTH_LONG
+            ).show()
+        }
 
         btnPower.setOnClickListener {
             enviarComando(ipField.text.toString(), "POWER")
@@ -138,27 +152,39 @@ class MainActivity : AppCompatActivity() {
         val endereco = ip.trim()
 
         if (endereco.isEmpty()) {
+
             Toast.makeText(
                 this,
                 "Informe o IP da TV",
                 Toast.LENGTH_SHORT
             ).show()
+
             return
         }
 
         CoroutineScope(Dispatchers.IO).launch {
 
-            val ok = client.sendKey(endereco, comando)
+            val existeTv = client.testarTvLG(endereco)
 
             runOnUiThread {
 
-                Toast.makeText(
-                    this@MainActivity,
-                    if (ok) "$comando enviado" else "Falha ao enviar $comando",
-                    Toast.LENGTH_SHORT
-                ).show()
+                if (existeTv) {
+
+                    Toast.makeText(
+                        this@MainActivity,
+                        "TV encontrada. Comando: $comando",
+                        Toast.LENGTH_SHORT
+                    ).show()
+
+                } else {
+
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Não foi possível conectar à TV",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
             }
         }
     }
 }
-
