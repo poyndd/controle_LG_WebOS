@@ -12,6 +12,8 @@ class LgRemoteClient {
 
     private val http = OkHttpClient.Builder()
         .callTimeout(3, TimeUnit.SECONDS)
+        .connectTimeout(3, TimeUnit.SECONDS)
+        .readTimeout(3, TimeUnit.SECONDS)
         .build()
 
     fun sendKey(ip: String, key: String): Boolean {
@@ -26,17 +28,18 @@ class LgRemoteClient {
                 "application/json".toMediaType()
             )
 
-            val req = Request.Builder()
+            val request = Request.Builder()
                 .url(url)
                 .post(body)
                 .build()
 
-            http.newCall(req)
+            http.newCall(request)
                 .execute()
-                .use { it.isSuccessful }
+                .use { response ->
+                    response.isSuccessful
+                }
 
         } catch (e: Exception) {
-
             false
         }
     }
@@ -60,32 +63,32 @@ class LgRemoteClient {
             }
 
         } catch (e: Exception) {
-
             false
         }
     }
 
-    fun procurarTvNaRede(
-        baseRede: String
-    ): String? {
+    fun testarTvLG(ip: String): Boolean {
+
+        return canConnectTcp(ip, 3000) ||
+                canConnectTcp(ip, 3001) ||
+                canConnectTcp(ip, 8080) ||
+                canConnectTcp(ip, 80)
+    }
+
+    fun procurarTvLG(): String? {
+
+        val baseRede = "192.168.68"
 
         for (i in 1..254) {
 
             val ip = "$baseRede.$i"
 
-            val abriu3000 = canConnectTcp(
-                ip,
-                3000,
-                300
-            )
+            val encontrada =
+                canConnectTcp(ip, 3000, 300) ||
+                canConnectTcp(ip, 3001, 300) ||
+                canConnectTcp(ip, 80, 300)
 
-            val abriu3001 = canConnectTcp(
-                ip,
-                3001,
-                300
-            )
-
-            if (abriu3000 || abriu3001) {
+            if (encontrada) {
                 return ip
             }
         }
