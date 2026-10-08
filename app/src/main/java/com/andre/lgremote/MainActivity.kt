@@ -49,14 +49,26 @@ class MainActivity : AppCompatActivity() {
         val touchpad = findViewById<View>(R.id.touchpad)
 
         btnScanTv.setOnClickListener {
+            CoroutineScope(Dispatchers.IO).launch {
+                val ipEncontrado = client.procurarTvLG()
 
-            ipField.setText("192.168.68.59")
-
-            Toast.makeText(
-                this,
-                "TV encontrada: 192.168.68.59",
-                Toast.LENGTH_LONG
-            ).show()
+                runOnUiThread {
+                    if (ipEncontrado != null) {
+                        ipField.setText(ipEncontrado)
+                        Toast.makeText(
+                            this@MainActivity,
+                            "TV encontrada: $ipEncontrado",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    } else {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Nenhuma TV encontrada na rede",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
         }
 
         btnPower.setOnClickListener {
@@ -167,15 +179,15 @@ class MainActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.IO).launch {
 
-            val existeTv = client.testarTvLG(endereco)
+            val comandoEnviado = client.sendKey(endereco, comando)
 
             runOnUiThread {
 
-                if (existeTv) {
+                if (comandoEnviado) {
 
                     Toast.makeText(
                         this@MainActivity,
-                        "TV encontrada. Comando: $comando",
+                        "Comando enviado: $comando",
                         Toast.LENGTH_SHORT
                     ).show()
 
@@ -183,7 +195,7 @@ class MainActivity : AppCompatActivity() {
 
                     Toast.makeText(
                         this@MainActivity,
-                        "Não foi possível conectar à TV",
+                        "Falha ao enviar comando para a TV",
                         Toast.LENGTH_LONG
                     ).show()
                 }
