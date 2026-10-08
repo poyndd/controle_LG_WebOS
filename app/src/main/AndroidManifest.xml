@@ -20,8 +20,6 @@
             </intent-filter>
         </activity>
 
-        <!-- outros componentes (services, receivers) -->
-
     </application>
 
 </manifest>
