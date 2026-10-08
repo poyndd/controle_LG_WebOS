@@ -47,13 +47,35 @@ class MainActivity : AppCompatActivity() {
 
         btnScanTv.setOnClickListener {
 
-            ipField.setText("192.168.68.59")
+            CoroutineScope(Dispatchers.IO).launch {
 
-            Toast.makeText(
-                this,
-                "TV encontrada: 192.168.68.59",
-                Toast.LENGTH_LONG
-            ).show()
+                val encontrada = client.canConnectTcp(
+                    "192.168.68.59",
+                    3000
+                )
+
+                runOnUiThread {
+
+                    if (encontrada) {
+
+                        ipField.setText("192.168.68.59")
+
+                        Toast.makeText(
+                            this@MainActivity,
+                            "TV respondeu na rede",
+                            Toast.LENGTH_LONG
+                        ).show()
+
+                    } else {
+
+                        Toast.makeText(
+                            this@MainActivity,
+                            "TV não respondeu",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            }
         }
 
         btnPower.setOnClickListener {
@@ -147,7 +169,10 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun enviarComando(ip: String, comando: String) {
+    private fun enviarComando(
+        ip: String,
+        comando: String
+    ) {
 
         val endereco = ip.trim()
 
