@@ -5,7 +5,6 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
-import org.json.JSONException
 import org.json.JSONObject
 import java.net.InetSocketAddress
 import java.net.Socket
@@ -25,19 +24,32 @@ class LgRemoteClient {
     private var clientKey: String? = null
     private val TAG = "LgRemoteClient"
 
-    /**
-     * Conecta à TV via WebSocket e faz o registro (pairing)
-     */
+    private val subnets = listOf(
+        "192.168.0",
+        "192.168.1",
+        "192.168.68",
+        "10.0.0",
+        "172.16.0"
+    )
+
     fun conectarTV(ip: String, onConnected: (Boolean) -> Unit) {
-        val wsUrl = "ws://$ip:3000"
-        
+        val endereco = ip.trim()
+        if (endereco.isEmpty()) {
+            onConnected(false)
+            return
+        }
+
+        webSocket?.close(1000, "reconnect")
+        webSocket = null
+        isConnected = false
+
         val request = Request.Builder()
-            .url(wsUrl)
+            .url("ws://$endereco:3000")
             .build()
 
         val listener = object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
-                Log.d(TAG, "WebSocket conectado a $ip")
+                Log.d(TAG, "WebSocket conectado em $endereco")
                 isConnected = true
                 enviarRegistro()
                 onConnected(true)
@@ -47,28 +59,26 @@ class LgRemoteClient {
                 Log.d(TAG, "Mensagem recebida: $text")
                 try {
                     val json = JSONObject(text)
-                    
-                    // Verifica se é resposta de registro com client-key
                     if (json.has("payload")) {
-                        val payload = json.getJSONObject("payload")
-                        if (payload.has("client-key")) {
+                        val payload = json.optJSONObject("payload")
+                        if (payload != null && payload.has("client-key")) {
                             clientKey = payload.getString("client-key")
                             Log.d(TAG, "Client-key recebido: $clientKey")
                         }
                     }
-                } catch (e: JSONException) {
-                    Log.e(TAG, "Erro ao parsear JSON: $e")
+                } catch (e: Exception) {
+                    Log.e(TAG, "Erro ao processar resposta da TV: ${e.message}")
                 }
             }
 
             override fun onFailure(webSocket: WebSocket, t: Throwable, response: okhttp3.Response?) {
-                Log.e(TAG, "Erro WebSocket: $t")
+                Log.e(TAG, "Erro de WebSocket: ${t.message}")
                 isConnected = false
                 onConnected(false)
             }
 
             override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
-                Log.d(TAG, "WebSocket fechado. Código: $code, Razão: $reason")
+                Log.d(TAG, "WebSocket fechado: $code - $reason")
                 isConnected = false
             }
         }
@@ -76,9 +86,6 @@ class LgRemoteClient {
         webSocket = http.newWebSocket(request, listener)
     }
 
-    /**
-     * Envia mensagem de registro/pareamento inicial
-     */
     private fun enviarRegistro() {
         try {
             val manifest = JSONObject().apply {
@@ -88,12 +95,8 @@ class LgRemoteClient {
                     put("created", "20140509")
                     put("appId", "com.lge.test")
                     put("vendorId", "com.lge")
-                    put("localizedAppNames", JSONObject().apply {
-                        put("", "LG Remote App")
-                    })
-                    put("localizedVendorNames", JSONObject().apply {
-                        put("", "LG Electronics")
-                    })
+                    put("localizedAppNames", JSONObject().apply { put("", "LG Remote App") })
+                    put("localizedVendorNames", JSONObject().apply { put("", "LG Electronics") })
                     put("permissions", org.json.JSONArray().apply {
                         put("LAUNCH")
                         put("LAUNCH_WEBAPP")
@@ -146,7 +149,7 @@ class LgRemoteClient {
                 })
             }
 
-            val registroPayload = JSONObject().apply {
+            val payload = JSONObject().apply {
                 put("type", "register")
                 put("id", UUID.randomUUID().toString())
                 put("payload", JSONObject().apply {
@@ -155,16 +158,13 @@ class LgRemoteClient {
                 })
             }
 
-            webSocket?.send(registroPayload.toString())
-            Log.d(TAG, "Registro enviado")
+            webSocket?.send(payload.toString())
+            Log.d(TAG, "Registro enviado para a TV")
         } catch (e: Exception) {
-            Log.e(TAG, "Erro ao enviar registro: $e")
+            Log.e(TAG, "Erro ao enviar registro: ${e.message}")
         }
     }
 
-    /**
-     * Envia comando SSAP para a TV
-     */
     fun enviarComando(uri: String, payload: Map<String, Any> = emptyMap()): Boolean {
         if (!isConnected || webSocket == null) {
             Log.w(TAG, "WebSocket não está conectado")
@@ -178,9 +178,7 @@ class LgRemoteClient {
                 put("uri", uri)
                 if (payload.isNotEmpty()) {
                     val payloadJson = JSONObject()
-                    payload.forEach { (key, value) ->
-                        payloadJson.put(key, value)
-                    }
+                    payload.forEach { (key, value) -> payloadJson.put(key, value) }
                     put("payload", payloadJson)
                 }
             }
@@ -189,14 +187,11 @@ class LgRemoteClient {
             Log.d(TAG, "Comando enviado: $uri")
             true
         } catch (e: Exception) {
-            Log.e(TAG, "Erro ao enviar comando: $e")
+            Log.e(TAG, "Erro ao enviar comando: ${e.message}")
             false
         }
     }
 
-    /**
-     * Envia comando de tecla mapeado
-     */
     fun enviarTecla(nomeTecla: String): Boolean {
         return when (nomeTecla) {
             "POWER" -> enviarComando("ssap://system/turnOff")
@@ -219,9 +214,6 @@ class LgRemoteClient {
         }
     }
 
-    /**
-     * Testa se consegue conectar na TV via TCP
-     */
     fun testarConexaoTCP(ip: String, timeout: Int = 500): Boolean {
         return try {
             Socket().use { socket ->
@@ -233,29 +225,22 @@ class LgRemoteClient {
         }
     }
 
-    /**
-     * Procura por TV LG na rede local
-     */
     fun procurarTvLG(): String? {
-        val baseRede = "192.168.68"
-        
-        for (i in 1..254) {
-            val ip = "$baseRede.$i"
-            if (testarConexaoTCP(ip, 300)) {
-                Log.d(TAG, "TV encontrada em: $ip")
-                return ip
+        for (subnet in subnets) {
+            for (i in 1..254) {
+                val ip = "$subnet.$i"
+                if (testarConexaoTCP(ip, 250)) {
+                    Log.d(TAG, "TV encontrada em: $ip")
+                    return ip
+                }
             }
         }
-        
-        Log.d(TAG, "Nenhuma TV encontrada")
+        Log.d(TAG, "Nenhuma TV encontrada na rede")
         return null
     }
 
-    /**
-     * Desconecta da TV
-     */
     fun desconectar() {
-        webSocket?.close(1000, "Desconectando")
+        webSocket?.close(1000, "desconectar")
         isConnected = false
         webSocket = null
     }
