@@ -14,17 +14,17 @@ import kotlinx.coroutines.launch
 class MainActivity : AppCompatActivity() {
 
     private lateinit var client: LgRemoteClient
-    private var isConectado = false
+    private var connected = false
+    private var lastTouchActionAt = 0L
 
     override fun onCreate(savedInstanceState: Bundle?) {
-
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        client = LgRemoteClient()
+        client = LgRemoteClient(this)
 
         val ipField = findViewById<EditText>(R.id.ip_field)
-        ipField.setText("192.168.68.59")
+        ipField.setText("")
 
         val btnScanTv = findViewById<Button>(R.id.btn_scan_tv)
         val btnPower = findViewById<Button>(R.id.btn_power)
@@ -40,10 +40,9 @@ class MainActivity : AppCompatActivity() {
         val btnNetflix = findViewById<Button>(R.id.btn_netflix)
         val touchpad = findViewById<View>(R.id.touchpad)
 
-        // Botão de procurar TV na rede
         btnScanTv.setOnClickListener {
             Toast.makeText(this, "Procurando TV na rede...", Toast.LENGTH_SHORT).show()
-            
+
             CoroutineScope(Dispatchers.IO).launch {
                 val ipEncontrado = client.procurarTvLG()
 
@@ -55,13 +54,11 @@ class MainActivity : AppCompatActivity() {
                             "TV encontrada: $ipEncontrado\nConectando...",
                             Toast.LENGTH_LONG
                         ).show()
-                        
-                        // Conecta automaticamente
                         conectarTV(ipEncontrado)
                     } else {
                         Toast.makeText(
                             this@MainActivity,
-                            "Nenhuma TV encontrada na rede",
+                            "Nenhuma TV foi encontrada na rede local",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -69,52 +66,18 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Botões de controle
-        btnPower.setOnClickListener {
-            enviarComando("POWER")
-        }
+        btnPower.setOnClickListener { enviarComando("POWER") }
+        btnInput.setOnClickListener { enviarComando("INPUT") }
+        btnHome.setOnClickListener { enviarComando("HOME") }
+        btnBack.setOnClickListener { enviarComando("BACK") }
+        btnMute.setOnClickListener { enviarComando("MUTE") }
+        btnVolUp.setOnClickListener { enviarComando("VOLUME_UP") }
+        btnVolDown.setOnClickListener { enviarComando("VOLUME_DOWN") }
+        btnChUp.setOnClickListener { enviarComando("CHANNEL_UP") }
+        btnChDown.setOnClickListener { enviarComando("CHANNEL_DOWN") }
+        btnYoutube.setOnClickListener { enviarComando("YOUTUBE") }
+        btnNetflix.setOnClickListener { enviarComando("NETFLIX") }
 
-        btnInput.setOnClickListener {
-            enviarComando("INPUT")
-        }
-
-        btnHome.setOnClickListener {
-            enviarComando("HOME")
-        }
-
-        btnBack.setOnClickListener {
-            enviarComando("BACK")
-        }
-
-        btnMute.setOnClickListener {
-            enviarComando("MUTE")
-        }
-
-        btnVolUp.setOnClickListener {
-            enviarComando("VOLUME_UP")
-        }
-
-        btnVolDown.setOnClickListener {
-            enviarComando("VOLUME_DOWN")
-        }
-
-        btnChUp.setOnClickListener {
-            enviarComando("CHANNEL_UP")
-        }
-
-        btnChDown.setOnClickListener {
-            enviarComando("CHANNEL_DOWN")
-        }
-
-        btnYoutube.setOnClickListener {
-            enviarComando("YOUTUBE")
-        }
-
-        btnNetflix.setOnClickListener {
-            enviarComando("NETFLIX")
-        }
-
-        // Touchpad
         var startX = 0f
         var startY = 0f
 
@@ -126,27 +89,36 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 MotionEvent.ACTION_MOVE -> {
+                    val now = System.currentTimeMillis()
                     val dx = event.x - startX
                     val dy = event.y - startY
+
+                    if (now - lastTouchActionAt < 120) {
+                        return@setOnTouchListener true
+                    }
 
                     if (dx > 30) {
                         enviarComando("RIGHT")
                         startX = event.x
+                        lastTouchActionAt = now
                     }
 
                     if (dx < -30) {
                         enviarComando("LEFT")
                         startX = event.x
+                        lastTouchActionAt = now
                     }
 
                     if (dy > 30) {
                         enviarComando("DOWN")
                         startY = event.y
+                        lastTouchActionAt = now
                     }
 
                     if (dy < -30) {
                         enviarComando("UP")
                         startY = event.y
+                        lastTouchActionAt = now
                     }
                 }
 
@@ -156,40 +128,29 @@ class MainActivity : AppCompatActivity() {
             }
             true
         }
-
-        // Tenta conectar no IP padrão ao iniciar
-        conectarTV(ipField.text.toString())
     }
 
-    /**
-     * Conecta à TV no IP especificado
-     */
     private fun conectarTV(ip: String) {
         val endereco = ip.trim()
-
         if (endereco.isEmpty()) {
-            Toast.makeText(
-                this,
-                "Informe o IP da TV",
-                Toast.LENGTH_SHORT
-            ).show()
+            Toast.makeText(this, "Informe o IP da TV", Toast.LENGTH_SHORT).show()
             return
         }
 
         CoroutineScope(Dispatchers.IO).launch {
-            client.conectarTV(endereco) { conectado ->
+            client.connect(endereco) { ok ->
                 runOnUiThread {
-                    isConectado = conectado
-                    if (conectado) {
+                    connected = ok
+                    if (ok) {
                         Toast.makeText(
                             this@MainActivity,
-                            "Conectado à TV em $endereco",
-                            Toast.LENGTH_SHORT
+                            "Conectado à TV em $endereco. Aceite o prompt na TV.",
+                            Toast.LENGTH_LONG
                         ).show()
                     } else {
                         Toast.makeText(
                             this@MainActivity,
-                            "Não foi possível conectar à TV",
+                            "Não foi possível conectar à TV. Verifique o IP e a rede.",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -198,21 +159,18 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /**
-     * Envia comando para a TV
-     */
     private fun enviarComando(comando: String) {
-        if (!isConectado) {
+        if (!connected) {
             Toast.makeText(
                 this,
-                "Não conectado à TV. Tente conectar novamente.",
+                "Não conectado à TV. Primeiro procure ou conecte à TV.",
                 Toast.LENGTH_SHORT
             ).show()
             return
         }
 
         CoroutineScope(Dispatchers.IO).launch {
-            val sucesso = client.enviarTecla(comando)
+            val sucesso = client.sendKeyAction(comando)
 
             runOnUiThread {
                 if (sucesso) {
@@ -224,7 +182,7 @@ class MainActivity : AppCompatActivity() {
                 } else {
                     Toast.makeText(
                         this@MainActivity,
-                        "Erro ao enviar comando",
+                        "Erro ao enviar comando para a TV",
                         Toast.LENGTH_SHORT
                     ).show()
                 }
@@ -234,6 +192,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        client.desconectar()
+        client.disconnect()
     }
 }
