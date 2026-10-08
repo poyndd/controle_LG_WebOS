@@ -24,6 +24,10 @@ class MainActivity : AppCompatActivity() {
 
         val ipField = findViewById<EditText>(R.id.ip_field)
 
+        // IP padrão da última TV encontrada
+        // O usuário pode alterar livremente
+        ipField.setText("192.168.68.59")
+
         val btnScanTv = findViewById<Button>(R.id.btn_scan_tv)
 
         val btnPower = findViewById<Button>(R.id.btn_power)
@@ -47,35 +51,11 @@ class MainActivity : AppCompatActivity() {
 
         btnScanTv.setOnClickListener {
 
-            CoroutineScope(Dispatchers.IO).launch {
-
-                val encontrada = client.canConnectTcp(
-                    "192.168.68.59",
-                    3000
-                )
-
-                runOnUiThread {
-
-                    if (encontrada) {
-
-                        ipField.setText("192.168.68.59")
-
-                        Toast.makeText(
-                            this@MainActivity,
-                            "TV respondeu na rede",
-                            Toast.LENGTH_LONG
-                        ).show()
-
-                    } else {
-
-                        Toast.makeText(
-                            this@MainActivity,
-                            "TV não respondeu",
-                            Toast.LENGTH_LONG
-                        ).show()
-                    }
-                }
-            }
+            Toast.makeText(
+                this,
+                "Descoberta automática WebOS ainda não implementada",
+                Toast.LENGTH_LONG
+            ).show()
         }
 
         btnPower.setOnClickListener {
@@ -140,28 +120,43 @@ class MainActivity : AppCompatActivity() {
                     val dy = event.y - startY
 
                     if (dx > 30) {
-                        enviarComando(ipField.text.toString(), "RIGHT")
+                        enviarComando(
+                            ipField.text.toString(),
+                            "RIGHT"
+                        )
                         startX = event.x
                     }
 
                     if (dx < -30) {
-                        enviarComando(ipField.text.toString(), "LEFT")
+                        enviarComando(
+                            ipField.text.toString(),
+                            "LEFT"
+                        )
                         startX = event.x
                     }
 
                     if (dy > 30) {
-                        enviarComando(ipField.text.toString(), "DOWN")
+                        enviarComando(
+                            ipField.text.toString(),
+                            "DOWN"
+                        )
                         startY = event.y
                     }
 
                     if (dy < -30) {
-                        enviarComando(ipField.text.toString(), "UP")
+                        enviarComando(
+                            ipField.text.toString(),
+                            "UP"
+                        )
                         startY = event.y
                     }
                 }
 
                 MotionEvent.ACTION_UP -> {
-                    enviarComando(ipField.text.toString(), "OK")
+                    enviarComando(
+                        ipField.text.toString(),
+                        "OK"
+                    )
                 }
             }
 
@@ -189,7 +184,8 @@ class MainActivity : AppCompatActivity() {
 
         CoroutineScope(Dispatchers.IO).launch {
 
-            val existeTv = client.testarTvLG(endereco)
+            val existeTv =
+                client.testarTvLG(endereco)
 
             runOnUiThread {
 
@@ -197,7 +193,7 @@ class MainActivity : AppCompatActivity() {
 
                     Toast.makeText(
                         this@MainActivity,
-                        "TV encontrada. Comando: $comando",
+                        "TV localizada. Comando: $comando",
                         Toast.LENGTH_SHORT
                     ).show()
 
@@ -205,7 +201,7 @@ class MainActivity : AppCompatActivity() {
 
                     Toast.makeText(
                         this@MainActivity,
-                        "Não foi possível conectar à TV",
+                        "TV não encontrada no endereço informado",
                         Toast.LENGTH_LONG
                     ).show()
                 }
