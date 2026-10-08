@@ -52,9 +52,8 @@ class LgRemoteClient(private val context: Context) {
 
         socket = client.newWebSocket(request, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: okhttp3.Response) {
-                connected = true
+                connected = false
                 sendRegister()
-                onReady(true)
             }
 
             override fun onMessage(webSocket: WebSocket, text: String) {
@@ -68,7 +67,9 @@ class LgRemoteClient(private val context: Context) {
                         val clientKey = payload.getString("client-key")
                         val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
                         prefs.edit().putString(keyName, clientKey).apply()
+                        connected = true
                         Log.d(TAG, "Client-key salvo: $clientKey")
+                        onReady(true)
                     }
                 } catch (e: Exception) {
                     Log.e(TAG, "Erro ao processar resposta da TV: ${e.message}")
