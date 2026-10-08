@@ -47,7 +47,7 @@ class LgRemoteClient {
     fun canConnectTcp(
         ip: String,
         port: Int,
-        timeoutMs: Int = 1000
+        timeoutMs: Int = 500
     ): Boolean {
 
         return try {
@@ -69,10 +69,7 @@ class LgRemoteClient {
 
     fun testarTvLG(ip: String): Boolean {
 
-        return canConnectTcp(ip, 3000) ||
-                canConnectTcp(ip, 3001) ||
-                canConnectTcp(ip, 8080) ||
-                canConnectTcp(ip, 80)
+        return canConnectTcp(ip, 3000)
     }
 
     fun procurarTvLG(): String? {
@@ -83,12 +80,7 @@ class LgRemoteClient {
 
             val ip = "$baseRede.$i"
 
-            val encontrada =
-                canConnectTcp(ip, 3000, 300) ||
-                canConnectTcp(ip, 3001, 300) ||
-                canConnectTcp(ip, 80, 300)
-
-            if (encontrada) {
+            if (canConnectTcp(ip, 3000)) {
                 return ip
             }
         }
